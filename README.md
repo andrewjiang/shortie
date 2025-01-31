@@ -1,6 +1,6 @@
-# Shorite
+# Shortie
 
-Shorite is a Node.js application that provides a RESTful API and integrates with a Telegram bot to summarize group chat messages using OpenAI's GPT-4o model.
+Shortie is a Node.js application that provides a RESTful API and integrates with a Telegram bot to summarize group chat messages using OpenAI's GPT-4o model.
 
 ## Features
 

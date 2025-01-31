@@ -1,0 +1,33 @@
+name: Deploy to Digital Ocean
+
+on:
+  push:
+    branches:
+      - main  # Change this to your default branch if it's not 'main'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'  # Specify your Node.js version
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Deploy to server
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        SERVER: root@your_droplet_ip
+        APP_DIR: /path/to/your/app
+      run: |
+        echo "$SSH_PRIVATE_KEY" > private_key
+        chmod 600 private_key
+        rsync -avz -e "ssh -i private_key" --exclude 'node_modules' ./ $SERVER:$APP_DIR
+        ssh -i private_key $SERVER "cd $APP_DIR && npm install && pm2 restart your-app-name"
