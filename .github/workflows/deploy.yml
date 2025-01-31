@@ -29,5 +29,5 @@ jobs:
       run: |
         echo "$SSH_PRIVATE_KEY" > private_key
         chmod 600 private_key
-        rsync -avz -e "ssh -i private_key" --exclude 'node_modules' ./ $SERVER:$APP_DIR
-        ssh -i private_key $SERVER "cd $APP_DIR && npm install && pm2 restart your-app-name"
+        rsync -avz -e "ssh -i private_key -o StrictHostKeyChecking=no" --exclude 'node_modules' ./ $SERVER:$APP_DIR
+        ssh -i private_key -o StrictHostKeyChecking=no $SERVER "cd $APP_DIR && npm install && pm2 restart your-app-name"
