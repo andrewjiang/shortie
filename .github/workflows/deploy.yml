@@ -24,8 +24,8 @@ jobs:
     - name: Deploy to server
       env:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        SERVER: root@your_droplet_ip
-        APP_DIR: /path/to/your/app
+        SERVER: root@206.189.199.26
+        APP_DIR: /root/shortie
       run: |
         echo "$SSH_PRIVATE_KEY" > private_key
         chmod 600 private_key
