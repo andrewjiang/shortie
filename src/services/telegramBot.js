@@ -4,6 +4,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const { summarizeMessages } = require('./openaiClient');
 const Message = require('../models/Message');
 const retryWithBackoff = require('../utils/retry');
+const Setting = require('../models/Setting');
 
 // Replace 'YOUR_TELEGRAM_BOT_TOKEN' with your actual bot token
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -92,6 +93,56 @@ bot.onText(/\/summary/, async (msg) => {
     console.error('Error retrieving or summarizing messages:', error);
     bot.sendMessage(chatId, 'Sorry, there was an error generating the summary.');
   }
+});
+
+// Handle /admin command
+bot.onText(/\/admin/, async (msg) => {
+  const chatId = msg.chat.id;
+
+  try {
+    // Find or create the setting for the chat
+    let setting = await Setting.findOne({ chatId });
+    if (!setting) {
+      setting = new Setting({ chatId });
+      await setting.save();
+    }
+
+    // Create language selection buttons
+    const options = {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: 'English', callback_data: 'language_English' },
+            { text: 'Spanish', callback_data: 'language_Spanish' },
+            { text: 'Chinese', callback_data: 'language_Chinese' },
+          ],
+        ],
+      },
+    };
+
+    bot.sendMessage(chatId, `Current language: ${setting.language}`, options);
+  } catch (error) {
+    console.error('Error handling /admin command:', error);
+    bot.sendMessage(chatId, 'An error occurred. Defaulting to English.');
+  }
+});
+
+// Handle callback queries for language selection
+bot.on('callback_query', async (callbackQuery) => {
+  const chatId = callbackQuery.message.chat.id;
+  const data = callbackQuery.data;
+
+  if (data.startsWith('language_')) {
+    const language = data.split('_')[1];
+
+    // Update the language setting for the chat
+    await Setting.updateOne({ chatId }, { language });
+
+    bot.sendMessage(chatId, `Language updated to ${language}`);
+  }
+
+  // Acknowledge the callback query
+  bot.answerCallbackQuery(callbackQuery.id);
 });
 
 module.exports = bot;
