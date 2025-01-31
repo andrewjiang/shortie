@@ -30,4 +30,9 @@ jobs:
         echo "$SSH_PRIVATE_KEY" > private_key
         chmod 600 private_key
         rsync -avz -e "ssh -i private_key -o StrictHostKeyChecking=no" --exclude 'node_modules' ./ $SERVER:$APP_DIR
-        ssh -i private_key -o StrictHostKeyChecking=no $SERVER "cd $APP_DIR && npm install && pm2 restart your-app-name"
+        ssh -i private_key -o StrictHostKeyChecking=no $SERVER "
+          cd $APP_DIR &&
+          npm install &&
+          npm install -g pm2 &&  # Ensure PM2 is installed
+          pm2 restart your-app-name || pm2 start src/index.js --name your-app-name
+        "
