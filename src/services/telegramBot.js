@@ -85,6 +85,7 @@ bot.onText(/\/summary/, async (msg) => {
     });
 
     // Log the messages being sent to OpenAI
+    console.log('Chat ID is asking for a summary:', chatId);
     console.log('Messages sent to OpenAI for summarization:', recentMessages.map(m => m.text));
 
     const summary = await summarizeMessages(recentMessages.map(m => m.text));
@@ -98,6 +99,7 @@ bot.onText(/\/summary/, async (msg) => {
 // Handle /admin command
 bot.onText(/\/admin/, async (msg) => {
   const chatId = msg.chat.id;
+  console.log(`Received /admin from chat ${chatId}`);
 
   try {
     // Find or create the setting for the chat
