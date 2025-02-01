@@ -332,10 +332,11 @@ bot.onText(/\/wallets/, async (msg) => {
     // Prepare the message with wallet information
     const walletButtons = [];
     for (const wallet of wallets) {
-      const solBalance = await getSolBalance(wallet.walletPublicKey);
+      const solBalanceLamports = await getSolBalance(wallet.walletPublicKey);
+      const solBalance = solBalanceLamports / 1_000_000_000; // Convert lamports to SOL
       walletButtons.push([
         {
-          text: `${wallet.walletName}: ${solBalance} SOL`,
+          text: `${wallet.walletName}: ${solBalance.toFixed(4)} SOL`, // Format to 4 decimal places
           callback_data: `share_${wallet.walletPublicKey}`,
         },
       ]);
