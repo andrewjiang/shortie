@@ -245,7 +245,7 @@ async function exportPrivateKey(bot, chatId, wallet) {
     const originalPrivateKey = await getPrivateKey(chatId, wallet.privateKey);
 
     // Send the original private key to the user
-    bot.sendMessage(chatId, `Private Key: ${originalPrivateKey}`, { parse_mode: 'Markdown' });
+    bot.sendMessage(chatId, `Private key: ${originalPrivateKey}`, { parse_mode: 'Markdown' });
   } catch (error) {
     console.error('Error exporting private key:', error);
     bot.sendMessage(chatId, 'An error occurred while exporting the private key.', { parse_mode: 'Markdown' });
