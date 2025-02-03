@@ -8,10 +8,10 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // This is the default and can be omitted
 });
 
-async function summarizeMessages(messages, chatId) {
+async function summarizeMessages(messages, chatId, chatName) {
   let language = 'English'; // Default language
 
-  console.log('chatId', chatId);
+  console.log('chatName', chatName);
 
   try {
     let setting = await Setting.findOne({ chatId });
@@ -20,7 +20,7 @@ async function summarizeMessages(messages, chatId) {
       await setting.save();
     }
     language = setting.language;
-    console.log('language for chatId', chatId, 'is', language);
+    console.log('language for the group', chatName, 'is', language);
   } catch (error) {
     console.error('Error retrieving or creating setting:', error);
   }

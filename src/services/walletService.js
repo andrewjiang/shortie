@@ -1,6 +1,8 @@
 const fetch = require('node-fetch');
 const bcrypt = require('bcrypt');
 const Wallet = require('../models/Wallet');
+const { extractChatIdFromText } = require('../utils/helpers');
+const adminMiddleware = require('../middleware/adminMiddleware');
 
 async function createWallet(chatId) {
   try {
@@ -110,4 +112,173 @@ async function getSolBalance(walletPublicKey) {
   }
 }
 
-module.exports = { createWallet, saveWallet, getPrivateKey, getApiKey, getSolBalance };
+async function createAndSaveWallet(bot, msg) {
+  await adminMiddleware({ msg }, null, async () => {
+
+    try {
+        const { walletPublicKey, privateKey, apiKey } = await createWallet(chatId);
+        const message = await bot.sendMessage(chatId, `Your wallet has been created!\nPublic Key: ${walletPublicKey}\nPlease provide a name for your wallet. This message will self-destruct in 10 seconds if no name is provided.`, { parse_mode: 'Markdown' });
+
+        setTimeout(() => {
+        bot.deleteMessage(chatId, message.message_id).catch((error) => {
+            console.error('Error deleting message:', error);
+        });
+        }, 10000);
+
+        bot.once('message', async (responseMsg) => {
+        let walletName = responseMsg.text.trim();
+        if (!walletName) {
+            const { default: randomWords } = await import('random-words');
+            walletName = randomWords({ exactly: 3, join: ' ' });
+        }
+
+        try {
+            const confirmationMessage = await saveWallet(chatId, walletPublicKey, privateKey, apiKey, walletName);
+            bot.sendMessage(adminChatId, `Wallet created for chat ${chatId}:\nPublic Key: ${walletPublicKey}`, { parse_mode: 'Markdown' });
+        } catch (error) {
+            bot.sendMessage(adminChatId, error.message, { parse_mode: 'Markdown' });
+        }
+        });
+    } catch (error) {
+        bot.sendMessage(adminChatId, 'An error occurred while creating your wallet.', { parse_mode: 'Markdown' });
+    }
+  });   
+}
+
+async function listWallets(bot, msg) {
+    // Apply middleware logic
+    await adminMiddleware({ msg }, null, async () => {
+      const chatId = msg.chatId; // Now using the chatId set by middleware
+      const chatName = msg.chat.title
+      console.log('chatName', chatName);
+      try {
+        // Find wallets that are not hidden
+        const wallets = await Wallet.find({
+          chatId,
+          $or: [{ hidden: false }, { hidden: { $exists: false } }]
+        });
+  
+        if (wallets.length === 0) {
+          return bot.sendMessage(chatId, 'No wallets found for this chat.', { parse_mode: 'Markdown' });
+        }
+  
+        const walletButtons = [];
+        for (const wallet of wallets) {
+          const solBalanceLamports = await getSolBalance(wallet.walletPublicKey);
+          const solBalance = solBalanceLamports / 1_000_000_000;
+          walletButtons.push([
+            {
+              text: `${wallet.walletName}: ${solBalance.toFixed(4)} SOL`,
+              callback_data: `display_${wallet.walletPublicKey}`,
+            },
+          ]);
+        }
+  
+        const options = {
+          reply_markup: {
+            inline_keyboard: walletButtons,
+          }, 
+          parse_mode: 'Markdown'
+        };
+  
+        bot.sendMessage(chatId, `Here are the wallets for *${chatName}*:`, options);
+
+        // Listen for callback queries
+        bot.on('callback_query', async (callbackQuery) => {
+          const data = callbackQuery.data;
+          if (data.startsWith('display_')) {
+            const walletPublicKey = data.split('_')[1];
+            await displayWallet(bot, chatId, walletPublicKey);
+          }
+          bot.answerCallbackQuery(callbackQuery.id);
+        });
+
+      } catch (error) {
+        console.error('Error retrieving wallets:', error);
+        bot.sendMessage(chatId, 'An error occurred while retrieving wallets.', { parse_mode: 'Markdown' });
+      }
+    });
+}
+
+async function displayWallet(bot, chatId, walletPublicKey) {
+  try {
+    const wallet = await Wallet.findOne({ walletPublicKey });
+    if (!wallet) {
+      return bot.sendMessage(chatId, 'Wallet not found.', { parse_mode: 'Markdown' });
+    }
+
+    const options = {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Export Private Key', callback_data: `export_${walletPublicKey}` }],
+          [{ text: 'Hide Wallet', callback_data: `hide_${walletPublicKey}` }],
+          [{ text: 'Delete Wallet', callback_data: `delete_${walletPublicKey}` }],
+        ],
+      },
+      parse_mode: 'Markdown'
+    };
+
+    bot.sendMessage(chatId, `Details for *${wallet.walletName}*\n\nAddress: ${wallet.walletPublicKey}`, options);
+
+    // Handle button actions
+    bot.on('callback_query', async (callbackQuery) => {
+      const data = callbackQuery.data;
+      if (data === `export_${walletPublicKey}`) {
+        await exportPrivateKey(bot, chatId, wallet);
+      } else if (data === `hide_${walletPublicKey}`) {
+        await hideWallet(bot, chatId, wallet);
+      } else if (data === `delete_${walletPublicKey}`) {
+        await deleteWallet(bot, chatId, wallet);
+      }
+      bot.answerCallbackQuery(callbackQuery.id);
+    });
+
+  } catch (error) {
+    console.error('Error displaying wallet:', error);
+    bot.sendMessage(chatId, 'An error occurred while displaying the wallet.', { parse_mode: 'Markdown' });
+  }
+}
+
+async function exportPrivateKey(bot, chatId, wallet) {
+  try {
+    // Retrieve the original private key using the getPrivateKey function
+    const originalPrivateKey = await getPrivateKey(chatId, wallet.privateKey);
+
+    // Send the original private key to the user
+    bot.sendMessage(chatId, `Private Key: ${originalPrivateKey}`, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error exporting private key:', error);
+    bot.sendMessage(chatId, 'An error occurred while exporting the private key.', { parse_mode: 'Markdown' });
+  }
+}
+
+async function hideWallet(bot, chatId, wallet) {
+  try {
+    // Update the wallet's hidden status to true
+    await Wallet.updateOne({ _id: wallet._id }, { hidden: true });
+    bot.sendMessage(chatId, `Wallet ${wallet.walletName} is now hidden.`, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error hiding wallet:', error);
+    bot.sendMessage(chatId, 'An error occurred while hiding the wallet.', { parse_mode: 'Markdown' });
+  }
+}
+
+async function deleteWallet(bot, chatId, wallet) {
+  try {
+    await Wallet.deleteOne({ _id: wallet._id });
+    bot.sendMessage(chatId, `Wallet ${wallet.walletName} has been deleted.`, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error deleting wallet:', error);
+    bot.sendMessage(chatId, 'An error occurred while deleting the wallet.', { parse_mode: 'Markdown' });
+  }
+}
+
+module.exports = {
+  createWallet,
+  saveWallet,
+  getPrivateKey,
+  getApiKey,
+  getSolBalance,
+  createAndSaveWallet,
+  listWallets,
+};

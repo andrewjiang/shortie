@@ -7,6 +7,7 @@ const walletSchema = new mongoose.Schema({
   apiKey: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
   walletName: { type: String, required: true },
+  hidden: { type: Boolean, default: false },
 });
 
 module.exports = mongoose.model('Wallet', walletSchema);
