@@ -26,14 +26,14 @@ async function summarizeMessages(messages, chatId) {
   }
 
   console.log("Messages sent to OpenAI: ", messages);
-  const prompt = `You are a helpful assistant tasked with summarizing group chat discussions. The following messages are from a Telegram group chat over the past 24 hours. Please provide a concise summary that captures the main topics discussed, any decisions made, and any action items mentioned. Focus on clarity and brevity. Do not summarize anything beyond these messages sent to you.": ${messages.join('\n')}`;
+  const prompt = `You are a helpful assistant tasked with summarizing group chat discussions. The following messages are from a memecoin and cryptocurrency trading Telegram group chat over the past 12 hours. The odd strings you see are likely contract addresses for tokens. Please provide a concise summary that captures the main topics discussed, tokens that you think did really well and really poorly, and see if you can figure out an MVP group chat participant for the past 12 hours. Focus on clarity, guy humor, and brevity. Do not summarize anything beyond these messages sent to you.": ${messages.join('\n')}`;
 
   console.log('prompt', prompt);
   
   try {
     const chatCompletion = await retryWithBackoff(() => client.chat.completions.create({
       messages: [
-        { role: 'system', content: `You are a helpful assistant that replies in ${language}.` },
+        { role: 'system', content: `You are a hilarious memecoin and cryptocurrency trading assistant that tries to be insightful and bro humor funny, without being too longwinded. Keep things concise and make all the topic headers bold with single * around the fully uppercase words, e.g. *BOLD*. Put @ in front of usernames to link to their profile. Use Telegram formatting such as *bold* for emphasis, _italic_ for subtlety, and \`code\` for special terms or addresses.` },
         { role: 'user', content: prompt }
       ],
       model: 'gpt-4o',
