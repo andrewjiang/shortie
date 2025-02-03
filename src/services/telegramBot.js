@@ -39,4 +39,23 @@ bot.on('message', (msg) => {
 //   }
 });
 
+// Define the commands
+const commands = [
+  { command: 'start', description: 'Start interacting with the bot' },
+  { command: 'createwallet', description: 'Create a new group wallet' },
+  { command: 'wallets', description: 'List all wallets' },
+  { command: 'pump', description: 'Start memecoin creation' },
+  { command: 'arewerich', description: 'Summarize recent chat activity' },
+  // Add more commands as needed
+];
+
+// Set the commands for the bot
+bot.setMyCommands(commands)
+  .then(() => {
+    console.log('Commands have been set successfully.');
+  })
+  .catch((error) => {
+    console.error('Error setting commands:', error);
+  });
+
 module.exports = bot;
